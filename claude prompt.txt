@@ -1,0 +1,37 @@
+Write a python script to produce a pair of messages to kafka topics, one to topic named ctm-parent-events and the other to a topic named ctm-children-events. Assign a unique identifier to each message in parent-events. Also give each message in children-events a unique identifier, but also add the identifier of the paired parents-events message to a field called parent_id in the children-events message
+Randomly wait 30 seconds to 3 minutes between the parent and child messages
+Include a timestamp for each message
+Include a random value in each message
+Include a descriptive text field for each message that identifies it as a parent or a child 
+Print each message as it is produced, including the topic-name it is produced to
+Randomly choose 30 seconds to 5 minutes to wait between message pairs
+Add an argument to specify a kafka bootstrap server, with a shortcut and a default of localhost:9092
+Add an argument to specify the number of message pairs to produce with a shortcut and a default value of 20 
+Terminate when the requested number of message pairs has been produced.
+
+
+Write a Python script to consume messages from two topics called parent-events and children-events that accepts command line arguments for bucket, Control-M server name and number of days to retain jobs
+For both S3 and secretsmanager, use us-west-2 as the region
+Retrieve Control-M base URL and API token from aws secrets manager secret with the same name as the S3 bucket.
+For each message from parent-events do the following:
+Extract id field 
+Construct a Control-M job with prefix "prnt-" followed by the id
+Using the Control-M REST API, check if a job with that name already exists for the current day. If yes, raise an error and skip this message.
+read a jinja template from an s3 bucket 
+Using Control-M server name and number of days to retain jobs as parameters, resolve the jinja template creating JSON
+Submit the JSON using the Control-M REST API
+For each message from children-events, do the following:
+Extract the parent-id
+Construct a Control-M job with prefix "prnt-" followed by the parent-id.  
+Using the Control-M REST API, check if a job with that name already exists for the current day. If no, perform the no-parent process.
+Construct a Control-M job with prefix "child-" followed by the parent-id
+Read a jinja template from the children subfolder in the same s3 bucket 
+Using Control-M server name and number of days to retain jobs as parameters, resolve the jinja template creating JSON
+Submit the JSON using the Control-M REST API
+Return
+For no-parent process do the following
+Construct a Control-M job with prefix "prnt-" followed by the parent-id
+read a jinja template from an s3 bucket 
+Using Control-M server name and number of days to retain jobs as parameters, resolve the jinja template creating JSON
+Submit the JSON using the Control-M REST API
+
