@@ -15,6 +15,7 @@ verify_certs = True
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Consume Kafka messages and create Control-M jobs")
     parser.add_argument("-b", "--bucket", required=False, default="623469066856-ctmprod-templates",help="S3 bucket name (also used as Secrets Manager secret name)")
+    parser.add_argument("-l", "--sla-runtime", required=False, default="23:59",help="Flow should complete within hh:mm after submission")
     parser.add_argument("-s", "--ctm-server", required=False, default="smprod",help="Control-M server name")
     parser.add_argument("-r", "--retention-days", type=int, required=False, default=14, help="Number of days to retain jobs")
     return parser.parse_args()
@@ -27,7 +28,7 @@ def get_s3_object(bucket, key):
 def get_template_from_s3(bucket, key):
     return get_s3_object(bucket, key)
 
-def get_ctm_constants(secret_name):
+def get_ctm_environment(secret_name):
     session = boto3.session.Session()
     client = session.client(service_name='secretsmanager', region_name='us-west-2')
     
@@ -42,9 +43,9 @@ def get_ctm_constants(secret_name):
         else:
             raise ValueError("Secret not found or not in the expected format")
 
-def check_job_exists(job_name, ctm_constants):
-    headers = {'x-api-key': ctm_constants['CTM_API_KEY']}
-    jobs_url = f"{ctm_constants['CTM_API_BASE_URL']}/run/jobs/status"
+def check_job_exists(job_name, ctm_env):
+    headers = {'x-api-key': ctm_env['CTM_API_KEY']}
+    jobs_url = f"{ctm_env['CTM_API_BASE_URL']}/run/jobs/status"
     today_date = datetime.today().strftime('%y%m%d')
     jobs_search = {"jobname": job_name, "orderFromDate" : today_date}
     response = requests.get(jobs_url, headers=headers, params=jobs_search, verify=verify_certs)
@@ -59,9 +60,9 @@ def log_time():
     current_time = now.strftime("%H:%M:%S")
     return (current_time)
 
-def submit_job_to_controlm(json_payload, ctm_constants):
-    headers = {'x-api-key': ctm_constants['CTM_API_KEY']}
-    run_url = f"{ctm_constants['CTM_API_BASE_URL']}/run"
+def submit_job_to_controlm(json_payload, ctm_env):
+    headers = {'x-api-key': ctm_env['CTM_API_KEY']}
+    run_url = f"{ctm_env['CTM_API_BASE_URL']}/run"
     
     # Convert JSON payload to file-like object
     job_json_stream = io.StringIO(json_payload)
@@ -72,7 +73,7 @@ def submit_job_to_controlm(json_payload, ctm_constants):
 
     return response.json()
 
-def process_parent_event(message, args, ctm_constants):
+def process_parent_event(message, args, ctm_env):
     parent_id = message['id']
     job_name = f"prnt-{parent_id}"
    
@@ -80,26 +81,26 @@ def process_parent_event(message, args, ctm_constants):
 
 #    import pdb;pdb.set_trace()
 
-    if check_job_exists(job_name, ctm_constants):
+    if check_job_exists(job_name, ctm_env):
         raise Exception(f"Job {job_name} already exists for the current day")
 
-    template_str = get_template_from_s3(args.bucket, 'parents/no_parent_template.json')
+    template_str = get_template_from_s3(args.bucket, 'parents/parent_template.json')
     template = Template(template_str)
     rendered_payload = json.loads(template.render(
         server_name=args.ctm_server,
         retention_days=args.retention_days,
         job_name=job_name,
         parentid=parent_id,
-        ctmsla="23:59"
+        ctmsla=args.sla-runtime
     ))
 
     json_payload = json.dumps(rendered_payload)
 
     print(log_time() + " " + "Submitting workflow for parent message " + parent_id)
 
-    return submit_job_to_controlm(json_payload, ctm_constants)
+    return submit_job_to_controlm(json_payload, ctm_env)
 
-def process_child_event(message, args, ctm_constants):
+def process_child_event(message, args, ctm_env):
     parent_id = message['parent_id']
     parent_job_name = f"prnt-{parent_id}"
     child_job_name = f"child-{parent_id}"
@@ -107,8 +108,8 @@ def process_child_event(message, args, ctm_constants):
 
 #    import pdb;pdb.set_trace()
 
-    if not check_job_exists(parent_job_name, ctm_constants):
-        process_no_parent(parent_id, args, ctm_constants)
+    if not check_job_exists(parent_job_name, ctm_env):
+        process_no_parent(parent_id, args, ctm_env)
         return
 
     template_str = get_template_from_s3(args.bucket, 'children/child_template.json')
@@ -125,9 +126,9 @@ def process_child_event(message, args, ctm_constants):
 
     print(log_time + " " + "Submitting workflow for child message " + parent_id)
 
-    return submit_job_to_controlm(json_payload, ctm_constants)
+    return submit_job_to_controlm(json_payload, ctm_env)
 
-def process_no_parent(parent_id, args, ctm_constants):
+def process_no_parent(parent_id, args, ctm_env):
     job_name = f"prnt-{parent_id}"
     template_str = get_template_from_s3(args.bucket, 'parents/parent_template.json')
     template = Template(template_str)
@@ -136,31 +137,31 @@ def process_no_parent(parent_id, args, ctm_constants):
         retention_days=args.retention_days,
         job_name=job_name,
         parentid=parent_id,
-        ctmsla="23:59"
+        ctmsla=args.sla-runtime
 
     ))
 
     json_payload = json.dumps(rendered_payload)
 
-    return submit_job_to_controlm(json_payload, ctm_constants)
+    return submit_job_to_controlm(json_payload, ctm_env)
 
-def process_topic(topic_name, process_func, args, ctm_constants):
+def process_topic(topic_name, process_func, args, ctm_env):
     consumer = KafkaConsumer(topic_name, bootstrap_servers=['localhost:9092'])
     for message in consumer:
         try:
             event = json.loads(message.value)
-            process_func(event, args, ctm_constants)
+            process_func(event, args, ctm_env)
         except Exception as e:
             print(f"Error processing {topic_name} event: {e}")
 
 def main():
     args = parse_arguments()
-    ctm_constants = get_ctm_constants(args.bucket)  # Using bucket name as secret name
+    ctm_env = get_ctm_environment(args.bucket)  # Using bucket name as secret name
 
     print("Listening for parents and children")
 
-    parent_thread = threading.Thread(target=process_topic, args=('ctm-parent-events', process_parent_event, args, ctm_constants))
-    children_thread = threading.Thread(target=process_topic, args=('ctm-children-events', process_child_event, args, ctm_constants))
+    parent_thread = threading.Thread(target=process_topic, args=('ctm-parent-events', process_parent_event, args, ctm_env))
+    children_thread = threading.Thread(target=process_topic, args=('ctm-children-events', process_child_event, args, ctm_env))
 
     parent_thread.start()
     children_thread.start()
