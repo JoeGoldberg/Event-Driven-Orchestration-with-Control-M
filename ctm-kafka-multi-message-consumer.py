@@ -15,7 +15,7 @@ verify_certs = True
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Consume Kafka messages and create Control-M jobs")
     parser.add_argument("-b", "--bucket", required=False, default="623469066856-ctmprod-templates",help="S3 bucket name (also used as Secrets Manager secret name)")
-    parser.add_argument("-l", "--sla-runtime", required=False, default="23:59",help="Flow should complete within hh:mm after submission")
+    parser.add_argument("-l", "--sla_runtime", required=False, default="23:59",help="Flow should complete within hh:mm after submission")
     parser.add_argument("-s", "--ctm-server", required=False, default="smprod",help="Control-M server name")
     parser.add_argument("-r", "--retention-days", type=int, required=False, default=14, help="Number of days to retain jobs")
     return parser.parse_args()
@@ -91,7 +91,7 @@ def process_parent_event(message, args, ctm_env):
         retention_days=args.retention_days,
         job_name=job_name,
         parentid=parent_id,
-        ctmsla=args.sla-runtime
+        ctmsla=args.sla_runtime
     ))
 
     json_payload = json.dumps(rendered_payload)
@@ -137,7 +137,7 @@ def process_no_parent(parent_id, args, ctm_env):
         retention_days=args.retention_days,
         job_name=job_name,
         parentid=parent_id,
-        ctmsla=args.sla-runtime
+        ctmsla=args.sla_runtime
 
     ))
 
