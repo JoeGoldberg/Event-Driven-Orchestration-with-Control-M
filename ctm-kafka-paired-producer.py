@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11 -u
 
 from kafka import KafkaProducer
 import json
@@ -78,16 +78,17 @@ def main():
     try:
         print(f"Starting to produce {args.num_pairs} message pairs...")
         for i in range(args.num_pairs):
-            print(f"\nProducing pair {i+1} of {args.num_pairs}")
+            print(f"Producing pair {i+1} of {args.num_pairs}")
             produce_message_pair(producer, parent_topic, child_topic)
             
-        print("\nFinished producing all message pairs")
+        print("Finished producing all message pairs")
             
     except KeyboardInterrupt:
-        print("\nProduction interrupted by user")
+        print("Production interrupted by user")
     finally:
         producer.close()
         print("Producer closed")
 
 if __name__ == "__main__":
     main()
+
