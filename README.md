@@ -5,7 +5,7 @@ This session is intended for data engineers, orchestration/automation architects
 
 # Objective
 Organizations are developing applications with complex event processing that requires interaction with orchestrated workflows. This scenario demonstrates an implementation using Kafka and Control-M that:
-*  Processes multiple request "bundles" that result in a single workflow
+*  Processes multiple event "bundles" that result in a single workflow
 *  Visualize all events within Control-M
 *  Monitor for an SLA within which the entire event package should complete
 *  Notify when either processing failures occur or event generation deviates from expectations
