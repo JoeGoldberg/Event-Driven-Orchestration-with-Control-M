@@ -17,6 +17,17 @@
       "Application" : "event orchestration"
     },
 
+    "jog-delay-producer": {
+      "Type": "Job:EmbeddedScript",
+      "Script": "#!/bin/bash\\nsleep $1\\n",
+      "FileName": "delaysleep.sh",
+      "Variables": [{"PARM1": "10"}],
+      "Host" : "kafka",
+      "Description" : "Ensure consumer is running before producer",
+      "RunAs" : "kafka",
+      "Application" : "event orchestration"
+    },
+
     "jog-produce-kafka-events" : {
       "Type" : "Job:EmbeddedScript",
       "Description" : "This embedded script is also available in the Github repository as ctm-kafka-paired-producer.py - note the first line of the script specifies -u which means messages are unbuffered and are written to stdout enabling Control-M to display the output while the job is running",
@@ -30,6 +41,11 @@
       "Variables" : [ {
         "PARM1" : "-n 2"
       } ]
-    }
+    },
+
+    "flow00": {"Type":"Flow", "Sequence":[ 
+      "jog-delay-producer",
+      "jog-produce-kafka-events"
+  ]}
   }
 }
