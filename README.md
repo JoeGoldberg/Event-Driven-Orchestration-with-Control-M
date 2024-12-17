@@ -36,4 +36,4 @@ This example implements a scenario in which a business transaction consists of t
    1. use the "run" service to execute the scenario: **ctm run order smprod jog-event-driven-orchestration -f event-driven-orchestration-variables.json**
 # Resources
    1. Automation API [documentation](https://documents.bmc.com/supportu/API/Monthly/en-US/Documentation/API_Intro.htm)
-   2. Video showing this implementation
+   2. [Video showing this implementation](https://www.dropbox.com/scl/fi/mw4sbfbqzdio2srjxe7m7/2024-12-16-Event-Driven-Orchestration-with-Control-M.mp4?rlkey=l0kin5cewbc7f7omm8f58c4ml&st=nzit5iba&dl=0) 
