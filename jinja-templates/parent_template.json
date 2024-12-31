@@ -1,0 +1,73 @@
+{
+    "Defaults": {
+        "RunAs": "ctmagent",
+        "Application": "event-driven-pipelines",
+        "SubApplication": "multi-message-requirements",
+        "Description": "Multi-message processing for kafka topics",
+        "Host": "zzz-linux-agents",
+        "ControlmServer": "{{ server_name }}",
+        "OrderMethod": "Manual",
+        "Folder": {
+            "SiteStandard": "jog"
+        },
+        "Job": {
+            "actionIfError": {
+                "Type": "If",
+                "CompletionStatus": "NOTOK",
+                "mailTeam": {
+                    "Type": "Mail",
+                    "Message": "Job %%JOBNAME failed",
+                    "Subject": "Error occurred",
+                    "To": "joe_goldberg@bmc.com"
+                }
+            },
+            "jog-jobs": {
+                "Type": "Resource:Pool",
+                "Quantity": "1"
+            }
+        }
+    },
+    "folder-{{ parentid }}": {
+        "Type": "SimpleFolder",
+        "prnt-{{ parentid }}": {
+            "Type": "Job:Command",
+            "Command": "echo Parent event {{ parentid }} processed"
+        },
+        "appl-{{ parentid }}": {
+            "Type": "Job:Command",
+            "Command": "echo Doing some serious work;sleep 300;echo Finished",
+            "eventsToWaitFor": {
+                "Type": "WaitForEvents",
+                "Events": [
+                    {
+                        "Event": "child-{{ parentid }}"
+                    }
+                ]
+            },
+            "eventsToDelete": {
+                "Type": "DeleteEvents",
+                "Events": [
+                    {
+                        "Event": "child-{{ parentid }}"
+                    }
+                ]
+            }
+        },
+        "service-{{ parentid }}": {
+            "Type": "Job:SLAManagement",
+            "ServiceName": "Service parent-id {{ parentid }}",
+            "ServicePriority": "3",
+            "CompleteIn": {
+                "Time": "{{ ctmsla }}"
+            }
+        },
+        "flowParent": {
+            "Type": "Flow",
+            "Sequence": [
+                "prnt-{{ parentid }}",
+                "appl-{{ parentid }}",
+                "service-{{ parentid }}"
+            ]
+        }
+    }
+}

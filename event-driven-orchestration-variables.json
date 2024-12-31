@@ -1,0 +1,6 @@
+{
+    "variables": [
+        {"PARM1": "-n 5"}
+    ],
+    "ignoreCriteria": "true"
+}

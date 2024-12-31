@@ -1,0 +1,45 @@
+{
+    "Defaults": {
+        "RunAs": "ctmagent",
+        "Application": "event-driven-pipelines",
+        "SubApplication": "multi-message-requirements",
+        "Description": "Multi-message processing for kafka topics",
+        "Host": "zzz-linux-agents",
+        "ControlmServer": "{{ server_name }}",
+        "OrderMethod": "Manual",
+        "Folder": {
+            "SiteStandard": "jog"
+        },
+        "Job": {
+            "actionIfError": {
+                "Type": "If",
+                "CompletionStatus": "NOTOK",
+                "mailTeam": {
+                    "Type": "Mail",
+                    "Message": "Job %%JOBNAME failed",
+                    "Subject": "Error occurred",
+                    "To": "joe_goldberg@bmc.com"
+                }
+            },
+            "jog-jobs": {
+                "Type": "Resource:Pool",
+                "Quantity": "1"
+            }
+        }
+    },
+    "folder-{{ parentid }}-child": {
+        "Type": "SimpleFolder",
+        "child-{{ parentid }}": {
+            "Type": "Job:Command",
+            "Command": "echo Parent event {{ parentid }} processed",
+            "eventsToAdd": {
+                "Type": "AddEvents",
+                "Events": [
+                    {
+                        "Event": "child-{{ parentid }}"
+                    }
+                ]
+            }
+        }
+    }
+}
